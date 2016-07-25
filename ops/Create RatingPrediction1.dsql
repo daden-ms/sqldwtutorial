@@ -1,0 +1,5 @@
+CREATE TABLE [dbo].[RatingPrediction] (
+    [DateTimeStart] datetime2(7) NULL, 
+    [PredictedRating] float NULL
+)
+WITH (CLUSTERED COLUMNSTORE INDEX, DISTRIBUTION = ROUND_ROBIN);

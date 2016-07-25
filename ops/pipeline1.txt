@@ -1,0 +1,43 @@
+{
+    "name": "AverageRatingGeneration",
+    "properties": {
+        "description": "generate_average_rating",
+        "activities": [
+            {
+                "type": "SqlServerStoredProcedure",
+                "typeProperties": {
+                    "storedProcedureName": "dbo.sp_generate_average_rating",
+                    "storedProcedureParameters": {
+                        "starttime": "$$Text.Format('{0:yyyy-MM-dd HH:mm:ss}', WindowStart)",
+                        "endtime": "$$Text.Format('{0:yyyy-MM-dd HH:mm:ss}', WindowEnd)"
+                    }
+                },
+                "inputs": [
+                    {
+                        "name": "AzureSqlDWInputRealtimeRating"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "name": "AzureSqlDWOutputAverageRating2"
+                    }
+                ],
+                "policy": {
+                    "timeout": "01:00:00",
+                    "concurrency": 1,
+                    "retry": 3
+                },
+                "scheduler": {
+                    "frequency": "Minute",
+                    "interval": 15
+                },
+                "name": "generate_average_rating"
+            }
+        ],
+        "start": "2016-07-15T01:00:00Z",
+        "end": "2016-07-15T02:00:00Z",
+        "isPaused": false,
+        "hubName": "rba29whtukuonfzetyadf_hub",
+        "pipelineMode": "Scheduled"
+    }
+}

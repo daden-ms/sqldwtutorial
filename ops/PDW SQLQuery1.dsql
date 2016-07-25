@@ -1,0 +1,80 @@
+﻿--delete from Ratings where DateTime>= '2016-07-14 19:27:00'
+EXEC  sp_generate_average_rating @starttime='2016-07-14 21:30:00', @endtime='2016-07-14 21:44:59'
+
+truncate table averageratings;
+
+select   * from Ratings where  DateTime>= '2016-07-14 21:32:00'  order by DateTime desc;
+
+select  Deviceid, count(*)/12 from Ratings where  DateTime>= '2016-07-14 21:32:00' group by Deviceid
+
+select top 10 * from AverageRatings;
+
+declare @Hour datetime = '2014-04-16 13:00:00'; -- starting time
+--The first 25Mins
+insert into averageratings
+select timestart AS DateTimeStart, 
+	DATEADD(MINUTE, 1, timestart)  AS DateTimeStop,
+    --cast (DATEADD(MINUTE, 1, timestart) as smalldatetime) AS DateTimeStop,
+	EventId,
+    AVG(CAST(Rating AS FLOAT)) AS AverageRating from (
+select
+	 DATEADD(MINUTE, DATEDIFF(second, @Hour, DateTime) / 60,@Hour) AS timestart,
+	 EventId,
+	 Rating
+from Ratings 
+WHERE EventID='1'
+AND DateTime>= '2016-07-14 21:32:00'
+)AS r
+group by timestart,eventId
+
+WITH Numbers AS
+(
+       SELECT TOP (180) n = CONVERT(INT, ROW_NUMBER() OVER (ORDER BY s1.[object_id])) - 1
+    FROM sys.all_objects AS s1 CROSS JOIN sys.all_objects AS s2
+)
+SELECT DATEADD(MINUTE, -n, '2016-07-15 3:30:00') AS DateTimeStart, ISNULL(AverageRating, 0) AS AverageRating
+FROM Numbers
+LEFT OUTER JOIN (select DateTimeStart,AverageRating from  AverageRatings) AS A
+ON DATEADD(MINUTE, -n,  '2016-07-15 3:30:00') = A.DateTimeStart
+ORDER BY DateTimeStart ASC
+
+
+select top 10 * from RatingPrediction2
+truncate table RatingPrediction2
+select * from RatingPrediction2 order by DateTimeStart desc
+
+order by timestart desc 
+
+--"$$Text.Format('DECLARE @Hour datetime = \\'2016-07-13 13:00:00\\'; SELECT timestart AS DateTimeStart, DATEADD(MINUTE, 1, timestart) AS DateTimeStop, EventId, AVG(CAST(Rating AS FLOAT)) AS AverageRating FROM (SELECT DATEADD(MINUTE, DATEDIFF(second, @Hour, DateTime) / 60,@Hour) AS timestart,EventId, Rating FROM Ratings  WHERE EventID=\\'1\\' AND  DateTime >= \\'{0:yyyy-MM-dd HH:mm:ss}\\' AND DateTime < \\'{1:yyyy-MM-dd HH:mm:ss}\\') AS R GROUP BY timestart ORDER BY timestart DESC', WindowStart, WindowEnd)"
+
+DECLARE @Hour datetime = '2016-07-13 13:00:00'; 
+SELECT timestart, AVG(CAST(Rating AS FLOAT)) AS AverageRating FROM (
+SELECT
+	 DATEADD(MINUTE, DATEDIFF(second, @Hour, DateTime) / 60,@Hour) AS timestart,
+	 Rating,
+	 EventID
+FROM Ratings 
+AND  DateTime >= \\'{0:yyyy-MM-dd HH:mm:ss}\\'
+AND DateTime < \\'{1:yyyy-MM-dd HH:mm:ss}\\'
+) AS R
+GROUP BY timestart,EventID
+ORDER BY timestart,EventID DESC
+
+"Database query": "$$Text.Format('
+DELETE FROM RatingPrediction2 
+WHERE Time BETWEEN  \\'{0:yyyy-MM-dd HH:mm:ss}\\' AND 
+dateadd(minute, 15, \\'{0:yyyy-MM-dd HH:mm:ss}\\'); 
+WITH Numbers AS (SELECT TOP (180) n = CONVERT(INT, ROW_NUMBER() 
+OVER (ORDER BY s1.[object_id])) - 1 FROM sys.all_objects AS s1 CROSS JOIN sys.all_objects AS s2 ) 
+SELECT Time, 
+      SUM(CallFailure) AS CallFailure 
+	  FROM ( SELECT DATEADD(MINUTE, -n, \\'{0:yyyy-MM-dd HH:mm:ss}\\') AS Time, 
+	  ISNULL(CallFailure, 0) AS CallFailure FROM Numbers 
+	  LEFT OUTER JOIN (SELECT * from SwitchCallInfo WHERE 
+	  Time BETWEEN DATEADD(MINUTE, -180, \\'{0:yyyy-MM-dd HH:mm:ss}\\') 
+	  AND \\'{0:yyyy-MM-dd HH:mm:ss}\\' AND Switch=\\'\"US001\"\\') 
+	  SwitchCallInfoFiltered  ON DATEADD(MINUTE, -n, \\'{0:yyyy-MM-dd HH:mm:ss}\\') = SwitchCallInfoFiltered.Time) temp 
+GROUP BY Time  ORDER BY Time ASC', WindowEnd)",
+
+
+

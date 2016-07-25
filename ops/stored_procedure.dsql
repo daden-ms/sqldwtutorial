@@ -1,0 +1,27 @@
+﻿-- Load newly available raw data from blob storage using Polybase.
+drop procedure sp_generate_average_rating
+CREATE PROCEDURE dbo.sp_generate_average_rating
+(
+	@starttime nvarchar(100), 
+	@endtime nvarchar(100)
+)
+AS
+BEGIN
+	DECLARE @Hour DATETIME = '2014-04-16 13:00:00'; -- starting time
+	
+	INSERT INTO AverageRatings
+	SELECT timestart AS DateTimeStart, 
+	DATEADD(MINUTE, 1, timestart)  AS DateTimeStop,
+    --cast (DATEADD(MINUTE, 1, timestart) as smalldatetime) AS DateTimeStop,
+	EventId,
+    AVG(CAST(Rating AS FLOAT)) AS AverageRating FROM (
+	    SELECT
+			DATEADD(MINUTE, DATEDIFF(second, @Hour, DateTime) / 60,@Hour) AS timestart,
+			EventId,
+			Rating
+		FROM Ratings 
+		WHERE EventID='1'
+		AND DateTime BETWEEN @starttime AND @endtime
+	)AS r
+	GROUP BY timestart,eventId
+END;
